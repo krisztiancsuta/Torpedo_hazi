@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "src/main.c",
+                "src/arguments.c",
+                "src/baudrate.c",
+                "src/serial.c",
+                "src/game.c",
+                "-o",
+                "bin/torpedo",
+                "-lpthread",
+                "-O0",
+                "-ggdb"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
