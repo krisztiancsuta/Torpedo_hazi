@@ -6,6 +6,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <poll.h>
+
+
+#define BUFFLEN (32)
+#define PFDSLEN (2)
 
 
 typedef struct Game_Settings {
@@ -29,8 +34,12 @@ typedef struct Game_Actions{
 
 
 int game_init(int fd);
+void send_start_signal(int fd);
 void game_loop(int fd);
 void game_cleanup();
 void print_map();
 int receive_host_data(int fd, Game_Actions *actions);
+char *move_is_valid(const char *move);
+void process_received_data(const char *data);
+int is_exit_command(const char *input);
 #endif

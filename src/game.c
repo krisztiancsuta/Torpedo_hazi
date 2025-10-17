@@ -1,11 +1,16 @@
 #include "game.h"
+#include <stdio.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "arguments.h"
+#include <ctype.h>
+
+#define BUFLEN (32)
+#define PFDSLEN (2)
+
 Game_Settings settings;
 Map map;
-Game_Actions move_result;
+Game_Actions action;
 
 
 int game_init(int fd) {
@@ -43,15 +48,237 @@ int game_init(int fd) {
     sprintf(buffer, "Start %d %d %d %d %d\n", map.width, map.height, settings.ship_count_1, settings.ship_count_2, settings.ship_count_3);
     write(fd, buffer, strlen(buffer));
     
-    // Receive response and map from Host (no action for initial setup)
-    if (receive_host_data(fd, NULL) != 0) {
-        printf("Error: Failed to receive data from Host\n");
-        return -1;
-    }
-
     print_map();
 
     return 0; // Success
+}
+
+
+int is_exit_command(const char *input) {
+    // Check if input contains an exit command: 'x', 'quit', or 'exit'
+    // Input should already be null-terminated
+    
+    if (input == NULL || strlen(input) == 0) {
+        return 0;
+    }
+    
+    // Create a copy and strip trailing whitespace
+    char buffer[BUFLEN];
+    strncpy(buffer, input, BUFLEN - 1);
+    buffer[BUFLEN - 1] = '\0';
+    
+    size_t len = strlen(buffer);
+    while (len > 0 && (buffer[len-1] == '\n' || buffer[len-1] == '\r' || buffer[len-1] == ' ')) {
+        buffer[--len] = '\0';
+    }
+    
+    // Convert to lowercase for case-insensitive comparison
+    char lower_buffer[BUFLEN];
+    for (size_t i = 0; i < len && i < BUFLEN - 1; i++) {
+        lower_buffer[i] = tolower(buffer[i]);
+    }
+    lower_buffer[len] = '\0';
+    
+    // Check if exit commands appear in the string
+    if (strcmp(lower_buffer, "x") == 0 || 
+        strstr(lower_buffer, "quit") != NULL || 
+        strstr(lower_buffer, "exit") != NULL) {
+        return 1;
+    }
+    
+    return 0;
+}
+
+
+void game_loop(int serial_fd) {   
+    bool exit_loop = false; 
+    char linebuf[BUFLEN]; 
+    static char receive_buffer[512]; 
+    static int buffer_pos = 0; 
+
+
+    struct pollfd pfds[PFDSLEN];
+
+    pfds[0].fd = STDIN_FILENO;
+    pfds[0].events = POLLIN; 
+
+
+    pfds[1].fd = serial_fd;
+    pfds[1].events = POLLIN;
+
+    while (!exit_loop) {
+
+        int ret = poll(pfds, PFDSLEN, -1);
+        if (ret == -1) {
+            write(STDERR_FILENO, "Poll error!\n", 12);
+            exit_loop = true;
+
+        } else if (ret > 0) { 
+            if (pfds[0].revents & POLLIN) { 
+             
+                ssize_t n = read(STDIN_FILENO, linebuf, BUFLEN);
+                if (n <= 0) {
+                    continue;
+                }
+                if (is_exit_command(linebuf)) {
+                    // Send RESET command to board
+                    write(serial_fd, "RESET\n", 6);
+                    exit_loop = true;
+                } else { 
+                    // Validate move before sending
+                    linebuf[n] = '\0'; // Null-terminate the string
+                    if (move_is_valid(linebuf) != NULL) {
+                        action.action[0] = '\0'; // Clear previous action
+                        write(serial_fd, linebuf, n); // n karakter írása a soros portra
+                    } else {
+                        strcpy(action.action, "INVALID");
+                        print_map();
+                    }
+                }
+            }
+            if (pfds[1].revents & POLLIN) {
+                ssize_t n = read(serial_fd, linebuf, BUFLEN - 1);
+                if (n > 0) {
+                    linebuf[n] = '\0';
+
+                    // Write received data to file
+                    FILE *log_file = fopen("received_data.txt", "a");
+                    if (log_file != NULL) {
+                        fprintf(log_file, "%s", linebuf);
+                        fclose(log_file);
+                    }
+                    
+                    // Accumulate data in buffer
+                    if (buffer_pos + n < sizeof(receive_buffer) - 1) {
+                        memcpy(receive_buffer + buffer_pos, linebuf, n);
+                        buffer_pos += n;
+                        receive_buffer[buffer_pos] = '\0';
+                        
+                        // Check if we received a complete message (ends with "END")
+                        if (strstr(receive_buffer, "END") != NULL) {
+                            process_received_data(receive_buffer);
+                            buffer_pos = 0; // Reset buffer
+                            receive_buffer[0] = '\0';
+                            print_map();
+                        }
+                    } else {
+         
+                        buffer_pos = 0;
+                        receive_buffer[0] = '\0';
+                    }
+                }
+            }
+        } else {
+            write(STDOUT_FILENO, "Timeout\n", 9);
+        }
+    }
+
+}
+
+void process_received_data(const char *data) {
+    // Parse the received message in format:
+    // ACTION\r\n
+    // MAP\r\n
+    // row1\r\n
+    // row2\r\n
+    // row3\r\n
+    // END\r\n
+    
+    char buffer[512];
+    strncpy(buffer, data, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+    
+    char *line = strtok(buffer, "\n");
+    int line_num = 0;
+    int map_row = 0;
+    
+    while (line != NULL) {
+        // Remove \r if present at the end
+        size_t len = strlen(line);
+        if (len > 0 && line[len-1] == '\r') {
+            line[len-1] = '\0';
+            len--;
+        }
+        
+        // First line is the action
+        if (line_num == 0) {
+            strncpy(action.action, line, sizeof(action.action) - 1);
+            action.action[sizeof(action.action) - 1] = '\0';
+            
+            // Check for game over
+            if (strstr(line, "GAME OVER") != NULL || strstr(line, "WIN") != NULL) {
+                action.is_game_over = 1;
+            } else {
+                action.is_game_over = 0;
+            }
+        }
+        // Second line should be "MAP"
+        else if (line_num == 1) {
+            if (strcmp(line, "MAP") != 0) {
+                // Invalid format
+                break;
+            }
+        }
+        // Lines until "END" are map rows
+        else if (strcmp(line, "END") == 0) {
+            break;
+        }
+        else if (map_row < map.height) {
+            // Parse map row by going through each character
+            // Format: "x x ~ " or "~ ~ ~ " (characters separated by spaces)
+            int col = 0;
+            for (size_t i = 0; i < len && col < map.width; i++) {
+                // Skip spaces and tabs
+                if (line[i] != ' ' && line[i] != '\t') {
+                    map.cells[map_row][col] = line[i];
+                    col++;
+                }
+            }
+            map_row++;
+        }
+        
+        line = strtok(NULL, "\n");
+        line_num++;
+    }
+}
+
+char *move_is_valid(const char *move) {
+
+    size_t len = strlen(move);
+    
+    // Remove trailing newline/carriage return if present
+    char move_copy[32];
+    strncpy(move_copy, move, sizeof(move_copy) - 1);
+    move_copy[sizeof(move_copy) - 1] = '\0';
+    
+    len = strlen(move_copy);
+    while (len > 0 && (move_copy[len-1] == '\n' || move_copy[len-1] == '\r')) {
+        move_copy[--len] = '\0';
+    }
+    
+    if (len < 2) {
+        return NULL;
+    }
+    
+    char row_char = move_copy[0];
+    
+    // Convert lowercase to uppercase
+    if (row_char >= 'a' && row_char <= 'z') {
+        row_char = row_char - 'a' + 'A';
+    }
+    
+    // Check if first character is a letter
+    if (row_char < 'A' || row_char > 'Z') {
+        return NULL;
+    }
+    
+    int row = row_char - 'A';
+    int col = atoi(&move_copy[1]) - 1;
+
+    if (row < 0 || row >= map.height || col < 0 || col >= map.width) {
+        return NULL;
+    }
+    return (char *)move;
 }
 
 void game_cleanup() {
@@ -61,6 +288,7 @@ void game_cleanup() {
     }
     free(map.cells);
 }
+
 void print_map() {
     static int first_print = 1;
     
@@ -95,8 +323,8 @@ void print_map() {
     
     // Print title with padding
     printf("%*s", left_padding, "");
-    if (strlen(move_result.action) > 0) {
-        printf("Current Map State: %s\n\n", move_result.action);
+    if (strlen(action.action) > 0) {
+        printf("Current Map State: %s\n\n", action.action);
     } else {
         printf("Current Map State:\n\n");
     }
@@ -122,266 +350,4 @@ void print_map() {
     printf("%*s", left_padding, "");
     printf("Enter move: ");
     fflush(stdout);
-}
-
-void game_loop(int fd) {   
-    // Main game loop
-    move_result.is_game_over = 0;
-    move_result.action[0] = '\0';
-
-    char input[256];
-    while (1) {
-        // Get user input
-        if (fgets(input, sizeof(input), stdin) != NULL) {
-            // Remove newline
-            input[strcspn(input, "\n")] = '\0';
-            
-            // Check for quit command
-            if (strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0) {
-                printf("Exiting game...\n");
-                break;
-            }
-            
-            // Send move to host
-            strcat(input, "\n");
-            write(fd, input, strlen(input));
-            
-            // Receive response with action
-            if (receive_host_data(fd, &move_result) != 0) {
-                printf("Error: Failed to receive response from host\n");
-                break;
-            }
-            
-            // Update and print map (action will be displayed in print_map)
-            print_map();
-            
-            // Check if game is over
-            if (move_result.is_game_over) {
-                printf("\n=== GAME OVER ===\n");
-                printf("You destroyed all ships!\n");
-                
-                break;
-            }
-        } else {
-            // Handle EOF or error
-            break;
-        }
-    }
-
-}
-
-int receive_host_data(int fd, Game_Actions *game_actions) {
-    // Calculate expected bytes for complete response
-    // Could be: "OK\r\nMAP\r\n..." for initial setup
-    // Or: "HIT!\r\nMAP\r\n..." or "MISS!\r\nMAP\r\n..." for game moves
-    
-    int bytes_per_row = (2 * map.width) + 2;  // Each cell is "x " (2 chars), plus "\r\n"
-    int base_size = 50 + (bytes_per_row * map.height) + 10;  // Response line + MAP + rows + END
-    
-    char *buffer = (char *)malloc(base_size + 100); // Extra buffer for safety
-    if (buffer == NULL) {
-        printf("Memory allocation failed for receive buffer\n");
-        return -1;
-    }
-    
-    int total_read = 0;
-    int bytes_read;
-    int max_attempts = 50;  // Maximum read attempts
-    int attempts = 0;
-    
-#if DEBUG
-    printf("Starting to receive data from host...\n");
-#endif
-    
-    // Read data in chunks until we have enough
-    while (attempts < max_attempts) {
-        bytes_read = read(fd, buffer + total_read, base_size - total_read);
-        if (bytes_read > 0) {
-            total_read += bytes_read;
-            buffer[total_read] = '\0';
-            
-            // Check if we have received "END" marker
-            if (strstr(buffer, "END") != NULL) {
-                break;  // We have all the data
-            }
-        } else if (bytes_read < 0) {
-            perror("Error reading from serial");
-            free(buffer);
-            return -1;
-        }
-        
-        attempts++;
-        usleep(20000); // 20ms delay between reads
-    }
-    
-    buffer[total_read] = '\0';
-    
-#if DEBUG
-    printf("Received %d bytes in %d attempts\n", total_read, attempts);
-    printf("Raw data:\n%s\n---END RAW---\n", buffer);
-#endif
-    
-    // Parse the received data
-    char *ptr = buffer;
-    char *line_start;
-    char *line_end;
-    
-    // 1. Read first line - could be "OK", "HIT!", "MISS!", "INVALID!", "ALREADY TRIED!", or "GAME OVER"
-    line_start = ptr;
-    line_end = strchr(line_start, '\n');
-    if (line_end == NULL) {
-        printf("Error: Malformed response (no first line)\n");
-        free(buffer);
-        return -1;
-    }
-    *line_end = '\0';
-    
-    // Trim line
-    while (*line_start == ' ' || *line_start == '\r') line_start++;
-    char *trim_end = line_end - 1;
-    while (trim_end > line_start && (*trim_end == ' ' || *trim_end == '\r' || *trim_end == '!')) {
-        if (*trim_end != '!') *trim_end = '\0';
-        trim_end--;
-    }
-    
-#if DEBUG
-    printf("First line: '%s'\n", line_start);
-#endif
-    
-    // Check if first line is already "MAP" (no action line sent)
-    bool map_on_first_line = false;
-    if (strcmp(line_start, "MAP") == 0) {
-        map_on_first_line = true;
-        // Store empty action or default message
-        if (game_actions != NULL) {
-            strcpy(game_actions->action, "");
-            game_actions->is_game_over = 0;
-        }
-#ifdef DEBUG
-        printf("MAP found on first line, no action\n");
-#endif
-    } else {
-        // Store action if provided
-        if (game_actions != NULL) {
-            strncpy(game_actions->action, line_start, sizeof(game_actions->action) - 1);
-            game_actions->action[sizeof(game_actions->action) - 1] = '\0';
-            game_actions->is_game_over = 0;
-            
-            // Check if game is over
-            if (strcmp(line_start, "GAME OVER") == 0) {
-                game_actions->is_game_over = 1;
-            }
-            
-#ifdef DEBUG
-            printf("Action stored: '%s', Game Over: %d\n", game_actions->action, game_actions->is_game_over);
-#endif
-        }
-        
-        // Validate first line (OK for setup, or action for game move)
-        if (strcmp(line_start, "OK") != 0 && 
-            strcmp(line_start, "HIT!") != 0 && 
-            strcmp(line_start, "MISS!") != 0 && 
-            strcmp(line_start, "INVALID!") != 0 && 
-            strcmp(line_start, "ALREADY TRIED!") != 0 &&
-            strcmp(line_start, "GAME OVER") != 0) {
-            printf("Error: Unexpected response '%s'\n", line_start);
-            free(buffer);
-            return -1;
-        }
-    }
-    
-    ptr = line_end + 1;
-    
-    // 2. Check for "MAP" (skip if already found on first line)
-    if (map_on_first_line) {
-        // Already at MAP, continue to parse rows
-#ifdef DEBUG
-        printf("Skipping MAP line check (already on first line)\n");
-#endif
-    } else {
-        // Need to find MAP line
-        line_start = ptr;
-        line_end = strchr(line_start, '\n');
-        if (line_end == NULL) {
-            printf("Error: Malformed response (no MAP line)\n");
-            free(buffer);
-            return -1;
-        }
-        *line_end = '\0';
-        
-        while (*line_start == ' ' || *line_start == '\r') line_start++;
-        trim_end = line_end - 1;
-        while (trim_end > line_start && (*trim_end == ' ' || *trim_end == '\r')) {
-            *trim_end = '\0';
-            trim_end--;
-        }
-        
-        if (strcmp(line_start, "MAP") != 0) {
-            printf("Error: Expected MAP, got '%s'\n", line_start);
-            free(buffer);
-            return -1;
-        }
-        
-#ifdef DEBUG
-        printf("Received MAP marker\n");
-#endif
-        
-        ptr = line_end + 1;
-    }
-    
-    // 3. Parse map rows
-    for (int row = 0; row < map.height; row++) {
-        line_start = ptr;
-        line_end = strchr(line_start, '\n');
-        if (line_end == NULL) {
-            printf("Error: Malformed map row %d\n", row);
-            free(buffer);
-            return -1;
-        }
-        *line_end = '\0';
-        
-        // Parse row data
-        int col = 0;
-        char *token = line_start;
-        while (*token != '\0' && col < map.width) {
-            if (*token != ' ' && *token != '\r') {
-                map.cells[row][col] = *token;
-                col++;
-            }
-            token++;
-        }
-        
-#if DEBUG
-        printf("Parsed row %d: %d cells\n", row, col);
-#endif
-        
-        ptr = line_end + 1;
-    }
-    
-    // 4. Check for "END"
-    line_start = ptr;
-    line_end = strchr(line_start, '\n');
-    if (line_end != NULL) {
-        *line_end = '\0';
-    }
-    
-    while (*line_start == ' ' || *line_start == '\r') line_start++;
-    if (line_end) {
-        trim_end = line_end - 1;
-        while (trim_end > line_start && (*trim_end == ' ' || *trim_end == '\r')) {
-            *trim_end = '\0';
-            trim_end--;
-        }
-    }
-    
-    if (strcmp(line_start, "END") != 0) {
-        printf("Warning: Expected END, got '%s'\n", line_start);
-    }
-    
-#if DEBUG
-    printf("Map reception completed\n");
-#endif
-    
-    free(buffer);
-    return 0;
 }

@@ -12,12 +12,13 @@ int32_t g_serspeed = 0;
 
 int main(int argc, char *argv[]) {
 
+
     // Handle command line arguments
     arguments_handle(argc, argv);
 
     // Initialize serial port
     int ser_fd = serial_init();
-    // Create thread to read from serial port
+
     game_init(ser_fd);
     // Run the game loop
     game_loop(ser_fd);

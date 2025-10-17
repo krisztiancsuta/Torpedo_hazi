@@ -15,14 +15,15 @@ SOURCES = $(SRC_DIR)/main.c \
           $(SRC_DIR)/arguments.c \
           $(SRC_DIR)/baudrate.c \
           $(SRC_DIR)/serial.c \
-          $(SRC_DIR)/game.c
+          $(SRC_DIR)/game.c \
 
 # Object files
 OBJECTS = $(BUILD_DIR)/main.o \
           $(BUILD_DIR)/arguments.o \
           $(BUILD_DIR)/baudrate.o \
           $(BUILD_DIR)/serial.o \
-          $(BUILD_DIR)/game.o
+          $(BUILD_DIR)/game.o \
+
 
 # Target executable
 TARGET = $(BIN_DIR)/torpedo

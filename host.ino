@@ -72,8 +72,18 @@ void loop() {
     if (Serial.available()) {
       String guess = Serial.readStringUntil('\n');
       guess.trim();
-      handleGuess(guess);
-      sendMap();
+      
+      // Check for RESET command
+      if (guess.equals("RESET")) {
+        Serial.println("GAME OVER");
+        sendMap();
+        gameActive = false;
+        Serial.println("Arduino Ready");
+        Serial.println("Waiting for START command...");
+      } else {
+        handleGuess(guess);
+        sendMap();
+      }
     }
   }
 }
