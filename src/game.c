@@ -135,8 +135,7 @@ void game_loop(int serial_fd) {
                         print_map();
                     }
                 }
-            }
-            if (pfds[1].revents & POLLIN) {
+            } else if (pfds[1].revents & POLLIN) {
                 ssize_t n = read(serial_fd, linebuf, BUFLEN - 1);
                 if (n > 0) {
                     linebuf[n] = '\0';
