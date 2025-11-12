@@ -10,7 +10,7 @@
                 "-s",
                 "dev=/dev/ttyACM0,speed=115200",
                 "-g",
-                "x=1,y=2,ship_cnt_1=1,ship_cnt_2=0,ship_cnt_3=0"
+                "x=3,y=3,ship_cnt_1=1,ship_cnt_2=1,ship_cnt_3=1"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

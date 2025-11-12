@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#define BUFLEN (32)
+#define BUFLEN (1024)
 #define PFDSLEN (2)
 
 Game_Settings settings;
@@ -93,29 +93,27 @@ int is_exit_command(const char *input) {
 void game_loop(int serial_fd) {   
     bool exit_loop = false; 
     char linebuf[BUFLEN]; 
-    static char receive_buffer[512]; 
+    static char receive_buffer[1024]; 
     static int buffer_pos = 0; 
 
 
-    struct pollfd pfds[PFDSLEN];
+    struct pollfd pfds[]={
+        {
+            .fd = STDIN_FILENO,
+            .events = POLLIN
+        },
+        {
+            .fd = serial_fd,
+            .events = POLLIN
+        }
+    };
 
-    pfds[0].fd = STDIN_FILENO;
-    pfds[0].events = POLLIN; 
-
-
-    pfds[1].fd = serial_fd;
-    pfds[1].events = POLLIN;
-
+    int nfds = sizeof(pfds) / sizeof(pfds[0]);
     while (!exit_loop) {
 
-        int ret = poll(pfds, PFDSLEN, -1);
-        if (ret == -1) {
-            write(STDERR_FILENO, "Poll error!\n", 12);
-            exit_loop = true;
-
-        } else if (ret > 0) { 
-            if (pfds[0].revents & POLLIN) { 
-             
+        int ret = poll(pfds, nfds, -1);
+        if (ret > 0) {
+            if (pfds[0].revents & POLLIN) {
                 ssize_t n = read(STDIN_FILENO, linebuf, BUFLEN);
                 if (n <= 0) {
                     continue;
@@ -167,8 +165,11 @@ void game_loop(int serial_fd) {
                     }
                 }
             }
+        } else if (ret == 0) {
+            // Timeout occurred, no data
+            continue;
         } else {
-            write(STDOUT_FILENO, "Timeout\n", 9);
+            write(STDOUT_FILENO, "Error occurred\n", 6);
         }
     }
 
@@ -183,29 +184,38 @@ void process_received_data(const char *data) {
     // row3\r\n
     // END\r\n
     
-    char buffer[512];
-    strncpy(buffer, data, sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0';
-    
-    char *line = strtok(buffer, "\n");
+    // Work directly on the data string using pointer arithmetic
+    const char *line_start = data;
+    const char *line_end;
     int line_num = 0;
     int map_row = 0;
     
-    while (line != NULL) {
-        // Remove \r if present at the end
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\r') {
-            line[len-1] = '\0';
-            len--;
+    while (*line_start != '\0') {
+        // Find the end of the current line
+        line_end = line_start;
+        while (*line_end != '\0' && *line_end != '\n' && *line_end != '\r') {
+            line_end++;
+        }
+        
+        // Calculate line length
+        size_t len = line_end - line_start;
+        
+        if (len == 0) {
+            // Empty line, skip it
+            if (*line_end == '\r') line_end++;
+            if (*line_end == '\n') line_end++;
+            line_start = line_end;
+            continue;
         }
         
         // First line is the action
         if (line_num == 0) {
-            strncpy(action.action, line, sizeof(action.action) - 1);
-            action.action[sizeof(action.action) - 1] = '\0';
+            size_t copy_len = len < sizeof(action.action) - 1 ? len : sizeof(action.action) - 1;
+            memcpy(action.action, line_start, copy_len);
+            action.action[copy_len] = '\0';
             
             // Check for game over
-            if (strstr(line, "GAME OVER") != NULL || strstr(line, "WIN") != NULL) {
+            if (strstr(action.action, "GAME OVER") != NULL || strstr(action.action, "WIN") != NULL) {
                 action.is_game_over = 1;
             } else {
                 action.is_game_over = 0;
@@ -213,13 +223,13 @@ void process_received_data(const char *data) {
         }
         // Second line should be "MAP"
         else if (line_num == 1) {
-            if (strcmp(line, "MAP") != 0) {
+            if (len != 3 || strncmp(line_start, "MAP", 3) != 0) {
                 // Invalid format
                 break;
             }
         }
         // Lines until "END" are map rows
-        else if (strcmp(line, "END") == 0) {
+        else if (len == 3 && strncmp(line_start, "END", 3) == 0) {
             break;
         }
         else if (map_row < map.height) {
@@ -227,16 +237,20 @@ void process_received_data(const char *data) {
             // Format: "x x ~ " or "~ ~ ~ " (characters separated by spaces)
             int col = 0;
             for (size_t i = 0; i < len && col < map.width; i++) {
+                char ch = line_start[i];
                 // Skip spaces and tabs
-                if (line[i] != ' ' && line[i] != '\t') {
-                    map.cells[map_row][col] = line[i];
+                if (ch != ' ' && ch != '\t') {
+                    map.cells[map_row][col] = ch;
                     col++;
                 }
             }
             map_row++;
         }
         
-        line = strtok(NULL, "\n");
+        // Move to next line
+        if (*line_end == '\r') line_end++;
+        if (*line_end == '\n') line_end++;
+        line_start = line_end;
         line_num++;
     }
 }
