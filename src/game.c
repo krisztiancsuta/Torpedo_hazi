@@ -1,9 +1,11 @@
 #include "game.h"
 #include <stdio.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <time.h>
 
 #define BUFLEN (1024)
 #define PFDSLEN (2)
@@ -11,10 +13,40 @@
 Game_Settings settings;
 Map map;
 Game_Actions action;
+Game_Stats stats;
 
 
 int game_init(int fd) {
     char buffer[128];
+    
+    // Initialize game stats
+    stats.move_count = 0;
+    stats.hit_count = 0;
+    stats.miss_count = 0;
+    stats.last_move[0] = '\0';
+    
+    // Create gamelogs directory if it doesn't exist
+    mkdir("gamelogs", 0755);
+    
+    // Generate timestamp for filename
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    strftime(stats.start_time, sizeof(stats.start_time), "%Y-%m-%d %H:%M:%S", t);
+    
+    char filename[64];
+    strftime(filename, sizeof(filename), "gamelogs/game_%Y-%m-%d_%H%M%S.txt", t);
+    
+    // Open log file
+    stats.log_file = fopen(filename, "w");
+    if (stats.log_file != NULL) {
+        fprintf(stats.log_file, "=== TORPEDO GAME LOG ===\n");
+        fprintf(stats.log_file, "Date: %s\n", stats.start_time);
+        fprintf(stats.log_file, "Board size: %dx%d\n", settings.map_width, settings.map_height);
+        fprintf(stats.log_file, "Ships: %dx1, %dx2, %dx3\n\n", settings.ship_count_1, settings.ship_count_2, settings.ship_count_3);
+        fprintf(stats.log_file, "--- MOVES ---\n");
+        fflush(stats.log_file);
+    }
+    
     // Initialize game state, allocate resources, etc.
     map.width = settings.map_width;
     map.height = settings.map_height;
@@ -127,6 +159,19 @@ void game_loop(int serial_fd) {
                     linebuf[n] = '\0'; // Null-terminate the string
                     if (move_is_valid(linebuf) != NULL) {
                         action.action[0] = '\0'; // Clear previous action
+                        
+                        // Store the move for logging (strip newline)
+                        strncpy(stats.last_move, linebuf, sizeof(stats.last_move) - 1);
+                        stats.last_move[sizeof(stats.last_move) - 1] = '\0';
+                        size_t move_len = strlen(stats.last_move);
+                        while (move_len > 0 && (stats.last_move[move_len-1] == '\n' || stats.last_move[move_len-1] == '\r')) {
+                            stats.last_move[--move_len] = '\0';
+                        }
+                        // Convert to uppercase for consistency
+                        if (stats.last_move[0] >= 'a' && stats.last_move[0] <= 'z') {
+                            stats.last_move[0] = stats.last_move[0] - 'a' + 'A';
+                        }
+                        
                         write(serial_fd, linebuf, n); // n karakter írása a soros portra
                     } else {
                         strcpy(action.action, "INVALID");
@@ -220,6 +265,24 @@ void process_received_data(const char *data) {
             } else {
                 action.is_game_over = 0;
             }
+            
+            // Log the move and result
+            if (stats.last_move[0] != '\0' && stats.log_file != NULL) {
+                stats.move_count++;
+                
+                // Update hit/miss counters
+                if (strstr(action.action, "HIT") != NULL || strstr(action.action, "GAME OVER") != NULL) {
+                    stats.hit_count++;
+                } else if (strstr(action.action, "MISS") != NULL) {
+                    stats.miss_count++;
+                }
+                
+                // Write to log
+                fprintf(stats.log_file, "%d. %s - %s\n", stats.move_count, stats.last_move, action.action);
+                fflush(stats.log_file);
+                
+                stats.last_move[0] = '\0'; // Clear after logging
+            }
         }
         // Second line should be "MAP"
         else if (line_num == 1) {
@@ -295,6 +358,28 @@ char *move_is_valid(const char *move) {
 }
 
 void game_cleanup() {
+    // Write summary to log file and close it
+    if (stats.log_file != NULL) {
+        fprintf(stats.log_file, "\n--- SUMMARY ---\n");
+        fprintf(stats.log_file, "Total moves: %d\n", stats.move_count);
+        fprintf(stats.log_file, "Hits: %d\n", stats.hit_count);
+        fprintf(stats.log_file, "Misses: %d\n", stats.miss_count);
+        
+        if (stats.move_count > 0) {
+            float accuracy = (float)stats.hit_count / stats.move_count * 100.0f;
+            fprintf(stats.log_file, "Accuracy: %.2f%%\n", accuracy);
+        }
+        
+        if (action.is_game_over) {
+            fprintf(stats.log_file, "Result: WIN\n");
+        } else {
+            fprintf(stats.log_file, "Result: QUIT (game not finished)\n");
+        }
+        
+        fclose(stats.log_file);
+        stats.log_file = NULL;
+    }
+    
     // Free allocated resources
     for (int i = 0; i < map.height; i++) {
         free(map.cells[i]);

@@ -32,6 +32,15 @@ typedef struct Game_Actions{
     int is_game_over;     // 1 if game is over, 0 otherwise
 } Game_Actions;
 
+typedef struct Game_Stats {
+    FILE *log_file;
+    int move_count;
+    int hit_count;
+    int miss_count;
+    char start_time[32];
+    char last_move[16];   // Store last move for logging (e.g., "A3")
+} Game_Stats;
+
 
 int game_init(int fd);
 void send_start_signal(int fd);
