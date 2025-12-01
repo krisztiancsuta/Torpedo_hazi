@@ -46,7 +46,7 @@ A rendszer két fő komponensből áll:
 ```palin
 ┌─────────────────────┐         UART          ┌─────────────────────┐
 │                     │  ◄──────────────────► │                     │
-│   PC (Linux/C)      │    /dev/ttyACM1       │   Board (host)      │
+│   PC (Linux/C)      │    /dev/ttyACM*       │   Board (host)      │
 │   - Felhasználói    │    115200 baud        │   - Játéklogika     │
 │     felület         │                       │   - Hajóelhelyezés  │
 │   - Input kezelés   │                       │   - Találat ellenőr.│
@@ -165,7 +165,7 @@ make release
 make run
 
 # Vagy kézzel megadott paraméterekkel
-./bin/torpedo -s dev=/dev/ttyACM0,speed=115200 -g x=10,y=5,ship_cnt_1=2,ship_cnt_2=3,ship_cnt_3=1
+./bin/torpedo -s dev=/dev/ttyACM*,speed=115200 -g x=10,y=5,ship_cnt_1=2,ship_cnt_2=3,ship_cnt_3=1
 ```
 
 ---
@@ -176,7 +176,7 @@ make run
 
 | Paraméter | Leírás | Példa |
 |-----------|--------|-------|
-| `dev` | Soros port eszköz | `/dev/ttyACM1` |
+| `dev` | Soros port eszköz | `/dev/ttyACM*` |
 | `speed` | Baudrate | `115200` |
 
 ### Játék beállítások (`-g`)
@@ -193,10 +193,10 @@ make run
 
 ```bash
 # 10x10 tábla, 3 db 1-es, 2 db 2-es, 1 db 3-as hajó
-./bin/torpedo -s dev=/dev/ttyACM0,speed=115200 -g x=10,y=10,ship_cnt_1=3,ship_cnt_2=2,ship_cnt_3=1
+./bin/torpedo -s dev=/dev/ttyACM*,speed=115200 -g x=10,y=10,ship_cnt_1=3,ship_cnt_2=2,ship_cnt_3=1
 
 # Kis tábla teszteléshez
-./bin/torpedo -s dev=/dev/ttyACM0,speed=115200 -g x=5,y=5,ship_cnt_1=1,ship_cnt_2=1,ship_cnt_3=0
+./bin/torpedo -s dev=/dev/ttyACM*,speed=115200 -g x=5,y=5,ship_cnt_1=1,ship_cnt_2=1,ship_cnt_3=0
 
 # Súgó megjelenítése
 ./bin/torpedo -h
