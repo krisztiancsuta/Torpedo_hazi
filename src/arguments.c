@@ -86,8 +86,8 @@ void arguments_handle(int argc, char **argv){
                     switch(getsubopt(&subopts, token, &value)) {
                         case MAP_WIDTH:
                             settings.map_width = atoi(value);
-                            if(settings.map_width <= 0) {
-                                printf("Map width must be greater than 0, exiting...\n");
+                            if(settings.map_width <= 0 || settings.map_width > 26) {
+                                printf("Map width must be greater than 0 and less than or equal to 26, exiting...\n");
                                 exit(EXIT_FAILURE);
                             }
 #if DEBUG
@@ -98,8 +98,8 @@ void arguments_handle(int argc, char **argv){
                             break;
                         case MAP_HEIGHT:
                             settings.map_height = atoi(value);
-                            if(settings.map_height <= 0) {
-                                printf("Map height must be greater than 0, exiting...\n");
+                            if(settings.map_height <= 0 || settings.map_height > 26) {
+                                printf("Map height must be greater than 0 and less than or equal to 26, exiting...\n");
                                 exit(EXIT_FAILURE);
                             }
 #if DEBUG

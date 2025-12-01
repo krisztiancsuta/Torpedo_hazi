@@ -1,0 +1,260 @@
+OK
+MAP
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x ~ 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ ~ ~ ~ 
+END
+MISS!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ ~ ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ x ~ ~ 
+END
+HIT!
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ x x ~ 
+END
+GAME OVER
+MAP
+x x x x x 
+~ ~ x x ~ 
+~ x ~ ~ ~ 
+~ ~ ~ x x 
+~ ~ x x x 
+END
+ERROR: Invalid dimensions
+OK
+MAP
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+~ ~ 
+END
+OK
+MAP
+~ ~ 
+END
+OK
+MAP
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+END
+OK
+MAP
+~ ~ ~ 
+~ ~ ~ 
+~ ~ ~ 
+END
