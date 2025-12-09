@@ -2,6 +2,9 @@
 
 Egy klasszikus torpedó (battleship) játék implementációja, amely egy **PC (Linux)** és egy **SiliconLabs xG24 Explorer** board közötti soros kommunikáción alapul.
 
+
+![Menü képernyőkép](./menu.png)
+
 ---
 
 ## Szerzők
@@ -85,11 +88,17 @@ A PC elküldi a `Start` parancsot a konfigurációval:
 Start <szélesség> <magasság> <1-es_hajók> <2-es_hajók> <3-as_hajók>
 ```
 
-### 2. Hajók elhelyezése
+
+### 2. Kézi paraméterezés
+
+A játék menüjében kézzel is beállíthatók az indítási paraméterek (pl. tábla szélessége/magassága, 1/2/3 egység hosszú hajók száma). A menüben megadott értékek felülírják a parancssori argumentumokban található alapértelmezéseket; ha egy mezőt üresen hagysz, a program a parancssori beállítást vagy a beépített alapértelmezést használja. A változtatások érvénybe lépnek a Start parancs elindításakor.
+
+
+### 3. Hajók elhelyezése
 
 A board véletlenszerűen elhelyezi a hajókat a táblán (vízszintesen vagy függőlegesen).
 
-### 3. Játékciklus
+### 4. Játékciklus
 
 ```plain
 ┌──────────────────────────────────────────────────────────┐
@@ -112,14 +121,14 @@ A board véletlenszerűen elhelyezi a hajókat a táblán (vízszintesen vagy f�
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 4. Térkép jelölések
+### 5. Térkép jelölések
 
 | Karakter | Jelentés |
 |----------|----------|
 | `~` | Ismeretlen mező (víz vagy hajó) |
 | `x` | Eltalált hajó |
 
-### 5. Játék vége
+### 6. Játék vége
 
 - **Győzelem:** Minden hajó elsüllyedt (`GAME OVER`)
 - **Kilépés:** `x`, `quit`, vagy `exit` parancs (+ `RESET` küldése az Board-nak)

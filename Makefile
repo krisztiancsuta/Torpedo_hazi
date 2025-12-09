@@ -67,7 +67,7 @@ distclean: clean
 
 # Run the program
 run: $(TARGET)
-	$(TARGET) -s dev=/dev/ttyACM0,speed=115200 -g x=3,y=3,ship_cnt_1=2,ship_cnt_2=3,ship_cnt_3=1
+	$(TARGET) -s dev=/dev/ttyACM0,speed=115200 -g x=10,y=10,ship_cnt_1=1,ship_cnt_2=1,ship_cnt_3=1
 
 # Install (optional, copies to /usr/local/bin)
 install: $(TARGET)

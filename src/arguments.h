@@ -31,5 +31,7 @@ enum {
 
 void print_help();
 void arguments_handle(int argc, char *argv[]);
+// Interactive configuration menu that asks the player for settings
+void interactive_configure();
 
 #endif
